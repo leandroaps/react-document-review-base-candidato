@@ -1,0 +1,9 @@
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# Build output
+dist
+
+# Dependency directories
+node_modules
