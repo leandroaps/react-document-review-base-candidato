@@ -180,6 +180,12 @@ small {
   background: #f8fafc;
 }
 
+.grid-body__row:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+  background: #eff6ff;
+}
+
 .grid-empty {
   padding: 32px;
   text-align: center;

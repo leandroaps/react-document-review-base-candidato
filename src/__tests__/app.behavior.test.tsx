@@ -208,6 +208,63 @@ describe("mutação de status", () => {
   });
 });
 
+describe("acessibilidade por teclado", () => {
+  test("Enter na linha focada abre o drawer", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("Contrato Social - ACME LTDA");
+
+    const row = getRowByTitle("Contrato Social - ACME LTDA");
+    row.focus();
+    expect(row).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+
+    const drawer = await screen.findByRole("complementary");
+    expect(within(drawer).getByText("ACME LTDA")).toBeInTheDocument();
+  });
+
+  test("ArrowDown move o foco para a próxima linha", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("Contrato Social - ACME LTDA");
+
+    const firstRow = getRowByTitle("Contrato Social - ACME LTDA");
+    firstRow.focus();
+
+    await user.keyboard("{ArrowDown}");
+
+    await waitFor(() => {
+      expect(getRowByTitle("Nota Fiscal 98217")).toHaveFocus();
+    });
+  });
+
+  test("Aprovar via teclado não abre o drawer", async () => {
+    const user = userEvent.setup();
+    updateDocumentStatusMock.mockResolvedValue({
+      ...DOCUMENTS[0],
+      status: "approved",
+      updatedAt: "2026-06-02T12:00:00Z",
+    });
+
+    renderApp();
+    await screen.findByText("Contrato Social - ACME LTDA");
+
+    const row = getRowByTitle("Contrato Social - ACME LTDA");
+    const approve = within(row).getByRole("button", { name: "Aprovar" });
+    approve.focus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(updateDocumentStatusMock).toHaveBeenCalledWith(
+        "doc-001",
+        "approved",
+      );
+    });
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+  });
+});
+
 describe("drawer", () => {
   test("abre ao clicar na linha e fecha pelo botão", async () => {
     const user = userEvent.setup();
