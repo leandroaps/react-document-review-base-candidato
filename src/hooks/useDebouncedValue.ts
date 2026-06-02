@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 /** Retorna `value` com atraso de `delay` ms, atualizando só após a digitação parar. */
 export function useDebouncedValue<T>(value: T, delay = 300): T {

@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import prettier from "eslint-config-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
@@ -25,4 +26,7 @@ export default tseslint.config(
       ],
     },
   },
+  // Desliga regras de formatação do ESLint que conflitariam com o Prettier.
+  // Deve ser o último item para sobrescrever os configs anteriores.
+  prettier,
 );
