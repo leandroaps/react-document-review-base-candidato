@@ -1,17 +1,18 @@
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import App from '../App';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import { expect, test } from "vitest";
+import App from "../App";
 
 function renderApp() {
   const queryClient = new QueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
       <App />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
-test('renderiza título da página', () => {
+test("renderiza título da página", () => {
   renderApp();
-  expect(screen.getByText('Documentos de clientes')).toBeInTheDocument();
+  expect(screen.getByText("Documentos de clientes")).toBeInTheDocument();
 });
