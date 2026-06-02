@@ -7,43 +7,64 @@ Use este arquivo para explicar suas decisões técnicas.
 - **Erro de tipos no import de CSS** (`TS2882` em `@styles/styles.css`): o arquivo `vite-env.d.ts`, que contém a referência `vite/client` (responsável por declarar os módulos `*.css`), estava na raiz do projeto, fora do `include: ["src"]` do `tsconfig.json`. Por isso o TypeScript não carregava a declaração ambiente de `.css`.
 - **`App.tsx` monolítico** (171 linhas): toda a UI, formatação, rótulos de status e regras de filtro estavam concentrados em um único componente.
 - **Filtragem recalculada a cada render**: `filteredDocuments` era computado fora de `useMemo`, refazendo o filtro em toda renderização (digitação, mudança de status, abertura do drawer).
+- **Busca de dados com `useState`/`useEffect`**: sem cache, retry ou refetch, mesmo com o `QueryClientProvider` já presente em `main.tsx`. O botão "Recarregar" usava `window.location.reload()`.
+- **Mudança de status sem feedback otimista**: a UI só refletia o novo status após o round-trip da API, e não havia rollback em caso de falha.
 - **Uso de `any`**: `statusLabels: any` e `selectedDocument: any` removiam a segurança de tipos.
 - **Bug de interação**: clicar em "Aprovar"/"Rejeitar" também disparava o `onClick` da linha (abertura do drawer), por falta de `stopPropagation`.
+- **Tabela sem virtualização**: todas as linhas eram montadas no DOM, custo que cresce linearmente com o volume de documentos.
+- **Tabela inacessível por teclado**: a seleção dependia exclusivamente de clique; as linhas não eram focáveis nem operáveis por teclado.
 
 ## Mudanças realizadas
 
 - **Correção do alias de CSS**: `vite-env.d.ts` movido para `src/vite-env.d.ts`, passando a ser coberto pelo `include` do `tsconfig.json`. Isso carrega as declarações `declare module '*.css'` do `vite/client` e resolve o `TS2882`.
-- **Tipos movidos para `src/types/`**: criados `src/types/document.ts` (`CustomerDocument`, `DocumentStatus`, `StatusFilter`, `DocumentStats`) e `src/types/index.ts` (barrel). O antigo `src/types.ts` foi removido. Imports via `./types` continuam funcionando.
+- **Tipos movidos para `src/types/`**: `src/types/document.ts` (`CustomerDocument`, `DocumentStatus`, `StatusFilter`, `DocumentStats`), acessado pelo alias `@typing`.
 - **Extração de constantes e utilitários**: `statusLabels` tipado em `src/constants/status.ts` e `formatDate` em `src/utils/date.ts`.
-- **Quebra em componentes pequenos** em `src/components/`: `Hero`, `StatsBar`, `Toolbar`, `DocumentTable`, `DocumentRow` e `DocumentDrawer`.
-- **`App.tsx` virou orquestrador**: apenas estado, efeitos e composição dos componentes.
+- **Quebra em componentes pequenos** em `src/components/`: `Hero`, `StatsBar`, `Toolbar`, `DocumentTable`, `DocumentRow`, `DocumentDrawer` e `Loader`.
+- **`App.tsx` virou orquestrador**: apenas estado de UI (busca, filtro, seleção), hooks de dados e composição dos componentes.
+- **Camada de API isolada** em `src/api/api.ts`: `fetchDocuments` e `updateDocumentStatus` simulam latência e instabilidade ocasional, mantendo o estado mockado fora dos componentes.
+- **Migração para React Query**: hooks `useDocuments` (`useQuery`) e `useUpdateDocumentStatus` (`useMutation`) em `src/hooks/useDocuments.ts`. O `QueryClient` em `main.tsx` define `retry: 2`, `staleTime: 30s` e `refetchOnWindowFocus: false`. O botão "Recarregar" agora chama `refetch()` em vez de recarregar a página.
+- **Mutação otimista com rollback**: `onMutate` cancela queries em andamento, salva o estado anterior e aplica a mudança no cache; `onError` restaura o snapshot; `onSuccess` sincroniza com a resposta real da API (ex.: `updatedAt`).
+- **Busca com debounce**: `useDebouncedValue` (300ms) evita refiltrar a cada tecla; um estado "Buscando..." é exibido enquanto o valor digitado ainda não foi aplicado.
+- **Virtualização da tabela**: `DocumentTable` usa `@tanstack/react-virtual` (`useVirtualizer`) para renderizar apenas as linhas visíveis (+ overscan), com altura medida via `measureElement`.
+- **Aliases de import** configurados em `vite.config.ts` e `tsconfig.json` (`@`, `@api`, `@components`, `@constants`, `@data`, `@hooks`, `@styles`, `@typing`, `@utils`).
+- **Navegação por teclado na tabela**: as linhas agora são focáveis e operáveis sem mouse — `Enter`/`Espaço` abre o drawer, `ArrowUp`/`ArrowDown` movem o foco entre linhas, `Home`/`End` vão para a primeira/última, com estilo `:focus-visible` e atributos `aria-rowcount`/`aria-rowindex`.
 
 ## Decisões de arquitetura
 
-- **Tipos como pasta com barrel (`types/index.ts`)**: permite separar o domínio (`document.ts`) de futuros agrupamentos sem quebrar os imports existentes (`./types`).
-- **Imports relativos entre pastas** (`../types`, `../utils/date`): mais robusto que usar o alias `@types`, que colide com o escopo de pacotes `@types/*` do npm.
-- **`DocumentRow` como componente memoizado dedicado**: isola o custo de render por linha, que é o ponto mais sensível em tabelas que crescem.
+- **Dados via React Query, estado de UI via `useState`**: a fonte da verdade dos documentos é o cache do React Query; `App` guarda só o que é efêmero de UI (query, filtro, `selectedId`). O documento selecionado é derivado do cache (`documents.find`), então reflete mudanças de status sem estado duplicado.
+- **`updateDocumentStatus` no hook, não no componente**: centraliza a lógica de cache (otimista + rollback) em um único lugar testável, deixando os componentes apenas disparando `mutate`.
+- **`documentKeys` como objeto de chaves**: padroniza o `queryKey` e evita strings soltas espalhadas pelo código.
+- **`@typing` em vez de `@types`**: o alias `@types` colidiria com o escopo de pacotes `@types/*` do npm; `@typing` evita a ambiguidade.
+- **`DocumentRow` como componente memoizado e posicionado pelo virtualizer**: isola o custo de render por linha (o ponto mais sensível em tabelas grandes) e recebe `start`/`index` para o posicionamento absoluto da virtualização.
 - **`DocumentDrawer` com `export default`**: necessário para o code-splitting via `React.lazy`, já que o drawer só aparece após seleção de uma linha.
 - **`Intl.DateTimeFormat` instanciado uma única vez** no módulo, em vez de recriar o objeto de opções a cada chamada de `formatDate`.
 
 ## Trade-offs
 
-- **Mantida a busca de dados com `useState`/`useEffect`** em vez de migrar para `useQuery`, apesar do `QueryClientProvider` já estar configurado em `main.tsx`. Optei por focar no escopo pedido (componentização e performance); a migração para React Query (cache, retry, refetch) ficou registrada como próximo passo.
-- **`Suspense` com `fallback={null}`** no drawer: como o bundle é pequeno e o drawer abre por clique, evitei um spinner que apareceria e sumiria rápido demais. Em telas mais pesadas valeria um fallback visível.
-- **`memo` + `useCallback` em todos os componentes**: adiciona um pouco de verbosidade, mas garante que a memoização das linhas não seja invalidada por novas referências de callback a cada render.
+- **Virtualização exige medir o container**: em ambiente sem layout (jsdom) o virtualizer mede 0 e não renderiza linhas. Foi necessário mockar `ResizeObserver`, `offsetHeight/Width` e `getBoundingClientRect` no setup de teste — custo aceitável para ganhar virtualização real em produção.
+- **`Suspense` do drawer com `Loader` leve**: como o bundle do drawer é pequeno e abre por clique, o fallback é discreto; em telas mais pesadas valeria um skeleton mais elaborado.
+- **`memo` + `useCallback` em todos os componentes**: adiciona alguma verbosidade, mas garante que a memoização das linhas não seja invalidada por novas referências de callback a cada render.
+- **Instabilidade simulada (3% de falha) mantida** na API mock: exercita o caminho de erro (`isError`/`error.message`) e o rollback otimista em vez de esconder cenários de falha.
 
 ## Testes adicionados
 
-- Nenhum teste novo adicionado nesta etapa. O teste existente (`src/__tests__/app.test.tsx`) continua passando após a refatoração, validando que a composição via novos componentes não quebrou a renderização do título da página.
-- Próximos testes recomendados: filtro por busca/status, mudança de status via API (com `stopPropagation`) e abertura/fechamento do drawer.
+- **`src/__tests__/app.behavior.test.tsx`** cobre o comportamento de ponta a ponta com a API mockada:
+  - **Filtros**: busca por título/cliente/categoria (validando o debounce) e filtro por status.
+  - **Mutação de status**: atualização otimista ao aprovar (UI muda antes da resposta) e rollback quando a API falha.
+  - **Drawer**: abertura ao clicar na linha (carregado via `lazy`/`Suspense`) e fechamento pelo botão.
+  - **Acessibilidade por teclado**: `Enter` na linha focada abre o drawer, `ArrowDown` move o foco para a próxima linha e a ativação de "Aprovar" via teclado não abre o drawer (guarda `event.target !== event.currentTarget`).
+- **`src/__tests__/app.test.tsx`** (existente) continua validando a renderização base após a refatoração.
+- Setup de teste (`src/test-setup.ts` + `beforeAll`) injeta dimensões de layout para que o virtualizer renderize linhas em jsdom.
 
 ## Performance e observabilidade
 
-- **`useMemo` em `filteredDocuments` e `stats`**: o filtro agora só recalcula quando `documents`, `query` ou `status` mudam.
-- **`React.memo`** em `Hero`, `StatsBar`, `Toolbar`, `DocumentTable` e `DocumentRow`: evita re-render de linhas não afetadas quando outra linha muda de status ou o drawer abre.
-- **`useCallback`** em `handleStatusChange`, `handleSelect` e `handleCloseDrawer`: referências estáveis para preservar a memoização das linhas.
-- **`React.lazy` + `Suspense`** no `DocumentDrawer`: remove o drawer do bundle inicial, carregando-o sob demanda.
-- **Normalização da busca**: a query é normalizada (`trim`/`toLowerCase`) uma vez por filtragem, em vez de a cada campo de cada linha.
+- **React Query com `staleTime` de 30s**: evita refetch desnecessário e serve dados do cache entre montagens.
+- **Virtualização da tabela**: apenas as linhas visíveis (+ overscan de 6) ficam no DOM, mantendo o custo constante independente do volume.
+- **Debounce na busca (300ms)**: reduz a frequência de refiltragem durante a digitação.
+- **`useMemo` em `filteredDocuments`, `stats` e `selectedDocument`**: recalculam só quando suas dependências mudam.
+- **`React.memo`** em `Hero`, `StatsBar`, `Toolbar`, `DocumentTable` e `DocumentRow` + **`useCallback`** nos handlers: preserva a memoização das linhas quando outra linha muda de status ou o drawer abre.
+- **`React.lazy` + `Suspense`** no `DocumentDrawer`: remove o drawer do bundle inicial.
+- **Mutação otimista**: a UI responde imediatamente, sem esperar o round-trip da API.
 - Observabilidade ainda não instrumentada — ver seção "O que faria com mais tempo".
 
 ## Uso de IA
@@ -52,11 +73,11 @@ Descreva quais ferramentas de IA você usou, em quais partes, quais outputs fora
 
 - O projeto é muito parecido com o que eu já trabalhava há algum tempo, então configurações básicas do Vite, Vitest, aplicação de alias, migração de components, foram feitos manualmente, sem auxilio de IA. Basicamente, usei o CHAT do próprio VS Code para documentar o DECISIONS.md, que ficaria mais fácil do que escrever manualmente.
 
+- Usei um pouco do CoPilot free para configurar a tabela virtual (`@tanstack/react-virtual`) e ajustar a integração com o React Query. Revisei e ajustei a virtualização (medição de linha, overscan) e o mock de layout nos testes manualmente.
+
 ## O que faria com mais tempo
 
-- Migrar a busca de dados para **React Query** (`useQuery`/`useMutation`), aproveitando o `QueryClientProvider` já existente, com cache, retry e refetch — substituindo o `window.location.reload()` do botão "Recarregar".
-- Adicionar **mutação otimista** na mudança de status, com rollback em caso de erro da API.
-- Cobertura de **testes** para filtros, mutação de status e drawer.
-- **Acessibilidade**: tornar as linhas da tabela focáveis/navegáveis por teclado (hoje a seleção depende de clique).
-- **Observabilidade**: instrumentar métricas de erro de carregamento e tempo de resposta da API.
-- **Virtualização** da tabela (ex.: `@tanstack/react-virtual`) caso o volume de documentos cresça.
+- **Acessibilidade (continuação)**: as linhas já são focáveis e navegáveis por teclado; faltaria gerenciar o foco ao abrir/fechar o drawer (focus trap e retorno do foco à linha de origem) e anunciar mudanças de status via `aria-live`.
+- **Observabilidade**: instrumentar métricas de erro de carregamento, taxa de falha de mutação e tempo de resposta da API.
+- **Feedback de erro na mutação**: além do rollback silencioso, exibir um toast informando que a atualização falhou.
+- **Paginação/scroll infinito** no fetch, caso o volume real de documentos justifique buscar em lotes.
