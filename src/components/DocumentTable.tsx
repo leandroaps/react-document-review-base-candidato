@@ -1,4 +1,5 @@
-import { memo } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useRef } from 'react';
 import type { CustomerDocument, DocumentStatus } from '../types';
 import { DocumentRow } from './DocumentRow';
 
@@ -8,35 +9,66 @@ interface DocumentTableProps {
   onStatusChange: (id: string, status: DocumentStatus) => void;
 }
 
-function DocumentTableComponent({ documents, onSelect, onStatusChange }: DocumentTableProps) {
+const COLUMNS = [
+  'Documento',
+  'Cliente',
+  'Categoria',
+  'Status',
+  'Confiança IA',
+  'Criado em',
+  'Responsável',
+  'Ações',
+] as const;
+
+/** Altura estimada de uma linha; ajustada por medição real após renderizar. */
+const ESTIMATED_ROW_HEIGHT = 72;
+
+export function DocumentTable({ documents, onSelect, onStatusChange }: DocumentTableProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: documents.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: 6,
+  });
+
+  const virtualRows = virtualizer.getVirtualItems();
+
   return (
     <section className="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Documento</th>
-            <th>Cliente</th>
-            <th>Categoria</th>
-            <th>Status</th>
-            <th>Confiança IA</th>
-            <th>Criado em</th>
-            <th>Responsável</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {documents.map((document) => (
-            <DocumentRow
-              key={document.id}
-              document={document}
-              onSelect={onSelect}
-              onStatusChange={onStatusChange}
-            />
+      <div className="grid-table" role="table" aria-label="Documentos">
+        <div className="grid-row grid-header" role="row">
+          {COLUMNS.map((column) => (
+            <span key={column} className="grid-cell" role="columnheader">
+              {column}
+            </span>
           ))}
-        </tbody>
-      </table>
+        </div>
+
+        <div ref={scrollRef} className="grid-body">
+          {documents.length === 0 ? (
+            <p className="grid-empty">Nenhum documento encontrado.</p>
+          ) : (
+            <div className="grid-viewport" style={{ height: virtualizer.getTotalSize() }}>
+              {virtualRows.map((virtualRow) => {
+                const document = documents[virtualRow.index];
+                return (
+                  <DocumentRow
+                    key={document.id}
+                    ref={virtualizer.measureElement}
+                    index={virtualRow.index}
+                    start={virtualRow.start}
+                    document={document}
+                    onSelect={onSelect}
+                    onStatusChange={onStatusChange}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
 }
-
-export const DocumentTable = memo(DocumentTableComponent);

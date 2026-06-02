@@ -110,36 +110,80 @@ small {
 }
 
 .table-card {
-  overflow: auto;
+  overflow-x: auto;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.grid-table {
+  /* minmax(0, fr): colunas encolhem para caber no container, sem scroll horizontal. */
+  --grid-columns: minmax(0, 2fr) minmax(0, 1.6fr) minmax(0, 1fr)
+    minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.3fr)
+    minmax(0, 1fr) minmax(0, 1.4fr);
+  padding: 10px;
 }
 
-th,
-td {
-  padding: 14px;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-  vertical-align: top;
+.grid-row {
+  display: grid;
+  grid-template-columns: var(--grid-columns);
 }
 
-th {
+.grid-header {
   font-size: 12px;
   text-transform: uppercase;
   color: #64748b;
   letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-td small {
+.grid-cell {
+  padding: 14px;
+  text-align: left;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.grid-cell small {
   display: block;
   margin-top: 4px;
 }
 
-tr:hover {
+.grid-cell--actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* Elemento de scroll vertical do virtualizer. */
+.grid-body {
+  position: relative;
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.grid-viewport {
+  position: relative;
+  width: 100%;
+}
+
+.grid-body__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  background: #fff;
+}
+
+.grid-body__row:hover {
   background: #f8fafc;
+}
+
+.grid-empty {
+  padding: 32px;
+  text-align: center;
+  color: #64748b;
 }
 
 .badge {
