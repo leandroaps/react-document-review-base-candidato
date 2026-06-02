@@ -1,6 +1,11 @@
 import { memo } from 'react';
 
-function HeroComponent() {
+interface HeroProps {
+  onReload: () => void;
+  isReloading?: boolean;
+}
+
+function HeroComponent({ onReload, isReloading = false }: HeroProps) {
   return (
     <section className="hero">
       <div>
@@ -10,7 +15,9 @@ function HeroComponent() {
           Revise documentos classificados automaticamente e acompanhe pendências da operação.
         </p>
       </div>
-      <button onClick={() => window.location.reload()}>Recarregar</button>
+      <button onClick={onReload} disabled={isReloading}>
+        {isReloading ? 'Recarregando...' : 'Recarregar'}
+      </button>
     </section>
   );
 }

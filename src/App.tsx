@@ -1,17 +1,11 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { fetchDocuments, updateDocumentStatus } from "./api";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { DocumentTable } from "./components/DocumentTable";
 import { Hero } from "./components/Hero";
 import { Loader } from "./components/Loader";
 import { StatsBar } from "./components/StatsBar";
 import { Toolbar } from "./components/Toolbar";
+import { useDebouncedValue } from "./hooks/useDebouncedValue";
+import { useDocuments, useUpdateDocumentStatus } from "./hooks/useDocuments";
 import type {
   CustomerDocument,
   DocumentStats,
@@ -21,25 +15,25 @@ import type {
 
 const DocumentDrawer = lazy(() => import("./components/DocumentDrawer"));
 
+const EMPTY_DOCUMENTS: CustomerDocument[] = [];
+
 export default function App() {
-  const [documents, setDocuments] = useState<CustomerDocument[]>([]);
+  const {
+    data: documents = EMPTY_DOCUMENTS,
+    isError,
+    error,
+    isFetching,
+    refetch,
+  } = useDocuments();
+  const updateStatus = useUpdateDocumentStatus();
+
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [selectedDocument, setSelectedDocument] =
-    useState<CustomerDocument | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setIsLoading(true);
-    fetchDocuments()
-      .then((result) => {
-        setDocuments(result);
-        setError("");
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const debouncedQuery = useDebouncedValue(query, 300);
+  // Busca "pendente" enquanto o valor digitado ainda não foi aplicado.
+  const isSearching = query.trim() !== debouncedQuery.trim();
 
   const stats = useMemo<DocumentStats>(
     () => ({
@@ -52,7 +46,7 @@ export default function App() {
   );
 
   const filteredDocuments = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = debouncedQuery.trim().toLowerCase();
 
     return documents.filter((document) => {
       const matchesQuery =
@@ -64,32 +58,36 @@ export default function App() {
       const matchesStatus = status === "all" || document.status === status;
       return matchesQuery && matchesStatus;
     });
-  }, [documents, query, status]);
+  }, [documents, debouncedQuery, status]);
+
+  // Deriva o documento selecionado do cache para refletir mudanças de status.
+  const selectedDocument = useMemo(
+    () => documents.find((item) => item.id === selectedId) ?? null,
+    [documents, selectedId],
+  );
 
   const handleStatusChange = useCallback(
-    async (id: string, nextStatus: DocumentStatus) => {
-      const updated = await updateDocumentStatus(id, nextStatus);
-      setDocuments((current) =>
-        current.map((item) => (item.id === id ? updated : item)),
-      );
-      setSelectedDocument((current) =>
-        current?.id === id ? updated : current,
-      );
+    (id: string, nextStatus: DocumentStatus) => {
+      updateStatus.mutate({ id, status: nextStatus });
     },
-    [],
+    [updateStatus],
   );
 
   const handleSelect = useCallback((document: CustomerDocument) => {
-    setSelectedDocument(document);
+    setSelectedId(document.id);
   }, []);
 
   const handleCloseDrawer = useCallback(() => {
-    setSelectedDocument(null);
+    setSelectedId(null);
   }, []);
+
+  const handleReload = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   return (
     <main className="page">
-      <Hero />
+      <Hero onReload={handleReload} isReloading={isFetching} />
 
       <StatsBar stats={stats} />
 
@@ -100,16 +98,19 @@ export default function App() {
         onStatusChange={setStatus}
       />
 
-      {isLoading && <Loader fullScreen label="Carregando documentos..." />}
-      {error && <p className="feedback error">{error}</p>}
+      {isFetching && <Loader fullScreen label="Carregando documentos..." />}
+      {isError && <p className="feedback error">{error.message}</p>}
 
-      {!isLoading && !error && (
-        <DocumentTable
-          documents={filteredDocuments}
-          onSelect={handleSelect}
-          onStatusChange={handleStatusChange}
-        />
-      )}
+      {!isError &&
+        (isSearching ? (
+          <Loader label="Buscando documentos..." />
+        ) : (
+          <DocumentTable
+            documents={filteredDocuments}
+            onSelect={handleSelect}
+            onStatusChange={handleStatusChange}
+          />
+        ))}
 
       {selectedDocument && (
         <Suspense fallback={<Loader label="Carregando detalhes..." />}>
