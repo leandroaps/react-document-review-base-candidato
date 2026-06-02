@@ -28,6 +28,8 @@ Use este arquivo para explicar suas decisões técnicas.
 - **Virtualização da tabela**: `DocumentTable` usa `@tanstack/react-virtual` (`useVirtualizer`) para renderizar apenas as linhas visíveis (+ overscan), com altura medida via `measureElement`.
 - **Aliases de import** configurados em `vite.config.ts` e `tsconfig.json` (`@`, `@api`, `@components`, `@constants`, `@data`, `@hooks`, `@styles`, `@typing`, `@utils`).
 - **Navegação por teclado na tabela**: as linhas agora são focáveis e operáveis sem mouse — `Enter`/`Espaço` abre o drawer, `ArrowUp`/`ArrowDown` movem o foco entre linhas, `Home`/`End` vão para a primeira/última, com estilo `:focus-visible` e atributos `aria-rowcount`/`aria-rowindex`.
+- **Gerenciamento de foco no drawer**: ao abrir, o foco move para dentro do drawer; `Tab`/`Shift+Tab` ficam presos (focus trap) e `Escape` fecha; ao fechar, o foco retorna à linha de origem (capturado via `document.activeElement` na montagem). O botão fechar ganhou `aria-label` e o drawer um `aria-labelledby` apontando para o título.
+- **Anúncio de status via `aria-live`**: uma região `role="status"` (`aria-live="polite"`, visualmente oculta com `.sr-only`) informa a leitores de tela a mudança aplicada e a falha em caso de erro na mutação.
 - **Formatação automática no commit**: Prettier (`.prettierrc.json` / `.prettierignore`) + Husky + lint-staged. O hook `pre-commit` (`.husky/pre-commit`) roda `npx lint-staged`, que aplica `prettier --write` apenas nos arquivos em stage. `eslint-config-prettier` foi adicionado ao final do `eslint.config.js` para desligar regras de formatação do ESLint que conflitariam com o Prettier. Scripts `format` e `format:check` disponíveis para uso manual/CI.
 
 ## Decisões de arquitetura
@@ -54,6 +56,7 @@ Use este arquivo para explicar suas decisões técnicas.
   - **Mutação de status**: atualização otimista ao aprovar (UI muda antes da resposta) e rollback quando a API falha.
   - **Drawer**: abertura ao clicar na linha (carregado via `lazy`/`Suspense`) e fechamento pelo botão.
   - **Acessibilidade por teclado**: `Enter` na linha focada abre o drawer, `ArrowDown` move o foco para a próxima linha e a ativação de "Aprovar" via teclado não abre o drawer (guarda `event.target !== event.currentTarget`).
+  - **Foco e `aria-live`**: o foco entra no drawer ao abrir e retorna à linha de origem ao fechar com `Escape`; a região `role="status"` anuncia a mudança de status aplicada.
 - **`src/__tests__/app.test.tsx`** (existente) continua validando a renderização base após a refatoração.
 - Setup de teste (`src/test-setup.ts` + `beforeAll`) injeta dimensões de layout para que o virtualizer renderize linhas em jsdom.
 
@@ -81,3 +84,6 @@ Descreva quais ferramentas de IA você usou, em quais partes, quais outputs fora
 - **Observabilidade**: instrumentar métricas de erro de carregamento, taxa de falha de mutação e tempo de resposta da API.
 - **Feedback de erro na mutação**: além do rollback silencioso, exibir um toast informando que a atualização falhou.
 - **Paginação/scroll infinito** no fetch, caso o volume real de documentos justifique buscar em lotes.
+- **Backend**: Configurar um backend e um banco de dados, mesmo que local, para centralizar as requests.
+- **Internacionalixação**: Configurar i18N para centralizar os textos e traduções, caso necessário.
+- **Integration Tests**: Configurar o Cypress ou Playright para criar testes automatizados.
