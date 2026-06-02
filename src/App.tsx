@@ -1,19 +1,19 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
-import { DocumentTable } from "./components/DocumentTable";
-import { Hero } from "./components/Hero";
-import { Loader } from "./components/Loader";
-import { StatsBar } from "./components/StatsBar";
-import { Toolbar } from "./components/Toolbar";
-import { useDebouncedValue } from "./hooks/useDebouncedValue";
-import { useDocuments, useUpdateDocumentStatus } from "./hooks/useDocuments";
+import { DocumentTable } from "@components/DocumentTable";
+import { Hero } from "@components/Hero";
+import { Loader } from "@components/Loader";
+import { StatsBar } from "@components/StatsBar";
+import { Toolbar } from "@components/Toolbar";
+import { useDebouncedValue } from "@hooks/useDebouncedValue";
+import { useDocuments, useUpdateDocumentStatus } from "@hooks/useDocuments";
 import type {
   CustomerDocument,
   DocumentStats,
   DocumentStatus,
   StatusFilter,
-} from "./types";
+} from "@typing/document";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 
-const DocumentDrawer = lazy(() => import("./components/DocumentDrawer"));
+const DocumentDrawer = lazy(() => import("@components/DocumentDrawer"));
 
 const EMPTY_DOCUMENTS: CustomerDocument[] = [];
 

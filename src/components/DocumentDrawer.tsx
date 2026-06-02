@@ -1,6 +1,6 @@
-import { statusLabels } from "../constants/status";
-import type { CustomerDocument } from "../types";
-import { formatDate } from "../utils/date";
+import { statusLabels } from "@constants/status";
+import { CustomerDocument } from "@typing/document";
+import { formatDate } from "@utils/date";
 
 interface DocumentDrawerProps {
   document: CustomerDocument;

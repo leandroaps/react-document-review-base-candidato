@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import type { StatusFilter } from '../types';
+import type { StatusFilter } from "@typing/document";
+import { memo } from "react";
 
 interface ToolbarProps {
   query: string;
@@ -8,7 +8,12 @@ interface ToolbarProps {
   onStatusChange: (value: StatusFilter) => void;
 }
 
-function ToolbarComponent({ query, status, onQueryChange, onStatusChange }: ToolbarProps) {
+function ToolbarComponent({
+  query,
+  status,
+  onQueryChange,
+  onStatusChange,
+}: ToolbarProps) {
   return (
     <section className="toolbar">
       <input
@@ -16,7 +21,10 @@ function ToolbarComponent({ query, status, onQueryChange, onStatusChange }: Tool
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
       />
-      <select value={status} onChange={(event) => onStatusChange(event.target.value as StatusFilter)}>
+      <select
+        value={status}
+        onChange={(event) => onStatusChange(event.target.value as StatusFilter)}
+      >
         <option value="all">Todos os status</option>
         <option value="pending">Pendente</option>
         <option value="reviewing">Em análise</option>

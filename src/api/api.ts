@@ -1,5 +1,5 @@
-import { documents } from './data';
-import type { CustomerDocument, DocumentStatus } from './types';
+import { documents } from "@data/data";
+import type { CustomerDocument, DocumentStatus } from "@typing/document";
 
 let state = [...documents];
 
@@ -12,24 +12,27 @@ export async function fetchDocuments(): Promise<CustomerDocument[]> {
 
   // Simula instabilidade ocasional. O candidato deve decidir como lidar com erro.
   if (Math.random() < 0.03) {
-    throw new Error('Falha ao carregar documentos');
+    throw new Error("Falha ao carregar documentos");
   }
 
   return [...state];
 }
 
-export async function updateDocumentStatus(id: string, status: DocumentStatus): Promise<CustomerDocument> {
+export async function updateDocumentStatus(
+  id: string,
+  status: DocumentStatus,
+): Promise<CustomerDocument> {
   await wait(350);
 
   const document = state.find((item) => item.id === id);
   if (!document) {
-    throw new Error('Documento não encontrado');
+    throw new Error("Documento não encontrado");
   }
 
   const updated = {
     ...document,
     status,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   state = state.map((item) => (item.id === id ? updated : item));

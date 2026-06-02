@@ -1,16 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { CustomerDocument } from "@typing/document";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../App";
-import type { CustomerDocument } from "../types";
 
-vi.mock("../api", () => ({
+vi.mock("@api/api", () => ({
   fetchDocuments: vi.fn(),
   updateDocumentStatus: vi.fn(),
 }));
 
-import { fetchDocuments, updateDocumentStatus } from "../api";
+import { fetchDocuments, updateDocumentStatus } from "@api/api";
 
 const fetchDocumentsMock = vi.mocked(fetchDocuments);
 const updateDocumentStatusMock = vi.mocked(updateDocumentStatus);

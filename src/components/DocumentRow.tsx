@@ -1,7 +1,7 @@
-import { forwardRef, memo } from 'react';
-import { statusLabels } from '../constants/status';
-import type { CustomerDocument, DocumentStatus } from '../types';
-import { formatDate } from '../utils/date';
+import { statusLabels } from "@constants/status";
+import type { CustomerDocument, DocumentStatus } from "@typing/document";
+import { formatDate } from "@utils/date";
+import { forwardRef, memo } from "react";
 
 interface DocumentRowProps {
   document: CustomerDocument;
@@ -14,7 +14,10 @@ interface DocumentRowProps {
 }
 
 const DocumentRowComponent = forwardRef<HTMLDivElement, DocumentRowProps>(
-  function DocumentRow({ document, index, start, onSelect, onStatusChange }, ref) {
+  function DocumentRow(
+    { document, index, start, onSelect, onStatusChange },
+    ref,
+  ) {
     return (
       <div
         ref={ref}
@@ -30,13 +33,15 @@ const DocumentRowComponent = forwardRef<HTMLDivElement, DocumentRowProps>(
         </span>
         <span className="grid-cell" role="cell">
           {document.customerName}
-          <small>{document.customerEmail || 'Sem e-mail cadastrado'}</small>
+          <small>{document.customerEmail || "Sem e-mail cadastrado"}</small>
         </span>
         <span className="grid-cell" role="cell">
           {document.category}
         </span>
         <span className="grid-cell" role="cell">
-          <span className={`badge ${document.status}`}>{statusLabels[document.status]}</span>
+          <span className={`badge ${document.status}`}>
+            {statusLabels[document.status]}
+          </span>
         </span>
         <span className="grid-cell" role="cell">
           {Math.round((document.confidence || 0) * 100)}%
@@ -45,13 +50,13 @@ const DocumentRowComponent = forwardRef<HTMLDivElement, DocumentRowProps>(
           {formatDate(document.createdAt)}
         </span>
         <span className="grid-cell" role="cell">
-          {document.assignedTo || 'Não atribuído'}
+          {document.assignedTo || "Não atribuído"}
         </span>
         <span className="grid-cell grid-cell--actions" role="cell">
           <button
             onClick={(event) => {
               event.stopPropagation();
-              onStatusChange(document.id, 'approved');
+              onStatusChange(document.id, "approved");
             }}
           >
             Aprovar
@@ -59,7 +64,7 @@ const DocumentRowComponent = forwardRef<HTMLDivElement, DocumentRowProps>(
           <button
             onClick={(event) => {
               event.stopPropagation();
-              onStatusChange(document.id, 'rejected');
+              onStatusChange(document.id, "rejected");
             }}
           >
             Rejeitar

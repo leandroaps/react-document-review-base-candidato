@@ -1,9 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchDocuments, updateDocumentStatus } from '../api';
-import type { CustomerDocument, DocumentStatus } from '../types';
+import { fetchDocuments, updateDocumentStatus } from "@api/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { CustomerDocument, DocumentStatus } from "@typing/document";
 
 export const documentKeys = {
-  all: ['documents'] as const,
+  all: ["documents"] as const,
 };
 
 /** Busca a lista de documentos com cache e retry (configurados no QueryClient). */
@@ -30,16 +30,25 @@ interface UpdateStatusContext {
 export function useUpdateDocumentStatus() {
   const queryClient = useQueryClient();
 
-  return useMutation<CustomerDocument, Error, UpdateStatusVariables, UpdateStatusContext>({
+  return useMutation<
+    CustomerDocument,
+    Error,
+    UpdateStatusVariables,
+    UpdateStatusContext
+  >({
     mutationFn: ({ id, status }) => updateDocumentStatus(id, status),
     onMutate: async ({ id, status }) => {
       // Evita que um refetch em andamento sobrescreva a atualização otimista.
       await queryClient.cancelQueries({ queryKey: documentKeys.all });
 
-      const previous = queryClient.getQueryData<CustomerDocument[]>(documentKeys.all);
+      const previous = queryClient.getQueryData<CustomerDocument[]>(
+        documentKeys.all,
+      );
 
-      queryClient.setQueryData<CustomerDocument[]>(documentKeys.all, (current) =>
-        current?.map((item) => (item.id === id ? { ...item, status } : item)),
+      queryClient.setQueryData<CustomerDocument[]>(
+        documentKeys.all,
+        (current) =>
+          current?.map((item) => (item.id === id ? { ...item, status } : item)),
       );
 
       return { previous };
@@ -51,8 +60,10 @@ export function useUpdateDocumentStatus() {
     },
     onSuccess: (updated) => {
       // Sincroniza com a resposta real da API (ex.: updatedAt).
-      queryClient.setQueryData<CustomerDocument[]>(documentKeys.all, (current) =>
-        current?.map((item) => (item.id === updated.id ? updated : item)),
+      queryClient.setQueryData<CustomerDocument[]>(
+        documentKeys.all,
+        (current) =>
+          current?.map((item) => (item.id === updated.id ? updated : item)),
       );
     },
   });

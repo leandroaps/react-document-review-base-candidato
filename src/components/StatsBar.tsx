@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import type { DocumentStats } from '../types';
+import type { DocumentStats } from "@typing/document";
+import { memo } from "react";
 
 interface StatsBarProps {
   stats: DocumentStats;

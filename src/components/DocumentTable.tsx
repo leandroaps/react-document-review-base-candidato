@@ -1,7 +1,7 @@
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { useRef } from 'react';
-import type { CustomerDocument, DocumentStatus } from '../types';
-import { DocumentRow } from './DocumentRow';
+import { useVirtualizer } from "@tanstack/react-virtual";
+import type { CustomerDocument, DocumentStatus } from "@typing/document";
+import { useRef } from "react";
+import { DocumentRow } from "./DocumentRow";
 
 interface DocumentTableProps {
   documents: CustomerDocument[];
@@ -10,20 +10,24 @@ interface DocumentTableProps {
 }
 
 const COLUMNS = [
-  'Documento',
-  'Cliente',
-  'Categoria',
-  'Status',
-  'Confiança IA',
-  'Criado em',
-  'Responsável',
-  'Ações',
+  "Documento",
+  "Cliente",
+  "Categoria",
+  "Status",
+  "Confiança IA",
+  "Criado em",
+  "Responsável",
+  "Ações",
 ] as const;
 
 /** Altura estimada de uma linha; ajustada por medição real após renderizar. */
 const ESTIMATED_ROW_HEIGHT = 72;
 
-export function DocumentTable({ documents, onSelect, onStatusChange }: DocumentTableProps) {
+export function DocumentTable({
+  documents,
+  onSelect,
+  onStatusChange,
+}: DocumentTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -50,7 +54,10 @@ export function DocumentTable({ documents, onSelect, onStatusChange }: DocumentT
           {documents.length === 0 ? (
             <p className="grid-empty">Nenhum documento encontrado.</p>
           ) : (
-            <div className="grid-viewport" style={{ height: virtualizer.getTotalSize() }}>
+            <div
+              className="grid-viewport"
+              style={{ height: virtualizer.getTotalSize() }}
+            >
               {virtualRows.map((virtualRow) => {
                 const document = documents[virtualRow.index];
                 return (
