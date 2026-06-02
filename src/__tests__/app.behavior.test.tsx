@@ -278,10 +278,61 @@ describe("drawer", () => {
     expect(within(drawer).getByText("ACME LTDA")).toBeInTheDocument();
     expect(within(drawer).getByText("Contrato")).toBeInTheDocument();
 
-    await user.click(within(drawer).getByRole("button", { name: "×" }));
+    await user.click(
+      within(drawer).getByRole("button", { name: /fechar detalhes/i }),
+    );
 
     await waitFor(() => {
       expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    });
+  });
+
+  test("move o foco para o drawer ao abrir e o devolve à origem ao fechar (Esc)", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("Contrato Social - ACME LTDA");
+
+    const row = getRowByTitle("Contrato Social - ACME LTDA");
+    row.focus();
+    await user.keyboard("{Enter}");
+
+    const drawer = await screen.findByRole("complementary");
+    const closeButton = within(drawer).getByRole("button", {
+      name: /fechar detalhes/i,
+    });
+    // O foco entra no drawer (primeiro elemento focável: o botão fechar).
+    expect(closeButton).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    });
+    // O foco retorna à linha de origem.
+    expect(getRowByTitle("Contrato Social - ACME LTDA")).toHaveFocus();
+  });
+});
+
+describe("aria-live", () => {
+  test("anuncia a mudança de status na região viva", async () => {
+    const user = userEvent.setup();
+    updateDocumentStatusMock.mockResolvedValue({
+      ...DOCUMENTS[0],
+      status: "approved",
+      updatedAt: "2026-06-02T12:00:00Z",
+    });
+
+    renderApp();
+    await screen.findByText("Contrato Social - ACME LTDA");
+
+    const row = getRowByTitle("Contrato Social - ACME LTDA");
+    await user.click(within(row).getByRole("button", { name: "Aprovar" }));
+
+    const status = screen.getByRole("status");
+    await waitFor(() => {
+      expect(status).toHaveTextContent(
+        '"Contrato Social - ACME LTDA" marcado como Aprovado.',
+      );
     });
   });
 });

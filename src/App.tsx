@@ -3,6 +3,7 @@ import { Hero } from "@components/Hero";
 import { Loader } from "@components/Loader";
 import { StatsBar } from "@components/StatsBar";
 import { Toolbar } from "@components/Toolbar";
+import { statusLabels } from "@constants/status";
 import { useDebouncedValue } from "@hooks/useDebouncedValue";
 import { useDocuments, useUpdateDocumentStatus } from "@hooks/useDocuments";
 import type {
@@ -11,7 +12,7 @@ import type {
   DocumentStatus,
   StatusFilter,
 } from "@typing/document";
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
 const DocumentDrawer = lazy(() => import("@components/DocumentDrawer"));
 
@@ -30,6 +31,12 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+
+  // Espelha os documentos sem entrar nas deps dos handlers, preservando a
+  // estabilidade das referências (e a memoização das linhas).
+  const documentsRef = useRef(documents);
+  documentsRef.current = documents;
 
   const debouncedQuery = useDebouncedValue(query, 300);
   // Busca "pendente" enquanto o valor digitado ainda não foi aplicado.
@@ -68,7 +75,20 @@ export default function App() {
 
   const handleStatusChange = useCallback(
     (id: string, nextStatus: DocumentStatus) => {
-      updateStatus.mutate({ id, status: nextStatus });
+      const title =
+        documentsRef.current.find((item) => item.id === id)?.title ??
+        "Documento";
+      const label = statusLabels[nextStatus];
+
+      updateStatus.mutate(
+        { id, status: nextStatus },
+        {
+          onError: () =>
+            setAnnouncement(`Falha ao atualizar "${title}". Status mantido.`),
+        },
+      );
+      // Atualização otimista: anuncia imediatamente a mudança aplicada.
+      setAnnouncement(`"${title}" marcado como ${label}.`);
     },
     [updateStatus],
   );
@@ -87,6 +107,11 @@ export default function App() {
 
   return (
     <main className="page">
+      {/* Região viva: anuncia mudanças de status a leitores de tela. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
+
       <Hero onReload={handleReload} isReloading={isFetching} />
 
       <StatsBar stats={stats} />
