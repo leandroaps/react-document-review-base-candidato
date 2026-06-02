@@ -28,6 +28,7 @@ Use este arquivo para explicar suas decisões técnicas.
 - **Virtualização da tabela**: `DocumentTable` usa `@tanstack/react-virtual` (`useVirtualizer`) para renderizar apenas as linhas visíveis (+ overscan), com altura medida via `measureElement`.
 - **Aliases de import** configurados em `vite.config.ts` e `tsconfig.json` (`@`, `@api`, `@components`, `@constants`, `@data`, `@hooks`, `@styles`, `@typing`, `@utils`).
 - **Navegação por teclado na tabela**: as linhas agora são focáveis e operáveis sem mouse — `Enter`/`Espaço` abre o drawer, `ArrowUp`/`ArrowDown` movem o foco entre linhas, `Home`/`End` vão para a primeira/última, com estilo `:focus-visible` e atributos `aria-rowcount`/`aria-rowindex`.
+- **Formatação automática no commit**: Prettier (`.prettierrc.json` / `.prettierignore`) + Husky + lint-staged. O hook `pre-commit` (`.husky/pre-commit`) roda `npx lint-staged`, que aplica `prettier --write` apenas nos arquivos em stage. `eslint-config-prettier` foi adicionado ao final do `eslint.config.js` para desligar regras de formatação do ESLint que conflitariam com o Prettier. Scripts `format` e `format:check` disponíveis para uso manual/CI.
 
 ## Decisões de arquitetura
 
@@ -77,7 +78,6 @@ Descreva quais ferramentas de IA você usou, em quais partes, quais outputs fora
 
 ## O que faria com mais tempo
 
-- **Acessibilidade (continuação)**: as linhas já são focáveis e navegáveis por teclado; faltaria gerenciar o foco ao abrir/fechar o drawer (focus trap e retorno do foco à linha de origem) e anunciar mudanças de status via `aria-live`.
 - **Observabilidade**: instrumentar métricas de erro de carregamento, taxa de falha de mutação e tempo de resposta da API.
 - **Feedback de erro na mutação**: além do rollback silencioso, exibir um toast informando que a atualização falhou.
 - **Paginação/scroll infinito** no fetch, caso o volume real de documentos justifique buscar em lotes.
